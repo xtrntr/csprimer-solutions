@@ -6,7 +6,7 @@ import time
 
 def average_age(users):
     total = 0
-    for u in users.values():
+    for u in users:
         total += u[0]
     return total / len(users)
 
@@ -14,7 +14,7 @@ def average_age(users):
 def average_payment_amount(users):
     amount = 0
     count = 0
-    for payments in users.values():
+    for payments in users:
         payments = payments[1:]
         count += len(payments)
         amount += sum(payments)
@@ -25,7 +25,7 @@ def stddev_payment_amount(users):
     mean = average_payment_amount(users)
     squared_diffs = 0
     count = 0
-    for payments in users.values():
+    for payments in users:
         payments = payments[1:]
         count += len(payments)
         for p in payments:
@@ -36,15 +36,21 @@ def stddev_payment_amount(users):
 
 def load_data():
     users = {}
+    ids = []
     with open('users.csv') as f:
         for line in csv.reader(f):
             uid, _, age, _, _ = line
             users[int(uid)] = [int(age)]
+            ids.append(int(uid))
     with open('payments.csv') as f:
         for line in csv.reader(f):
             amount, _, uid = line
             users[int(uid)].append(int(amount))
-    return users
+    ids.sort()
+    rtn = []
+    for i in ids:
+        rtn.append(users[i])
+    return rtn
 
 
 if __name__ == '__main__':
