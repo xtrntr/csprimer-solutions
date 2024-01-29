@@ -2,63 +2,51 @@ import csv
 import datetime
 import math
 import time
+import functools
 
 
-def average_age(users):
+def average_age(payload):
     total = 0
-    for u in users:
-        total += u[0]
-    return total / len(users)
+    ages, _ = payload
+    return sum(ages) / len(ages)
 
 
-def average_payment_amount(users):
-    amount = 0
-    count = 0
-    for payments in users:
-        payments = payments[1:]
-        count += len(payments)
-        amount += sum(payments)
-    return float(amount) / count / 100
+def average_payment_amount(payload):
+    _, payments = payload
+    return sum(payments) / len(payments)
 
 
-def stddev_payment_amount(users):
-    mean = average_payment_amount(users)
+def stddev_payment_amount(payload):
+    ages, payments = payload
+    mean = average_payment_amount(payload)
     squared_diffs = 0
     count = 0
-    for payments in users:
-        payments = payments[1:]
-        count += len(payments)
-        for p in payments:
-            diff = p - mean * 100
-            squared_diffs += diff * diff
-    return math.sqrt(squared_diffs / count / 10000)
+    for p in payments:
+        diff = p - mean
+        squared_diffs += diff * diff
+    return math.sqrt(squared_diffs / len(payments))
 
 
 def load_data():
-    users = {}
-    ids = []
+    ages = []
+    payments = []
     with open('users.csv') as f:
         for line in csv.reader(f):
             uid, _, age, _, _ = line
-            users[int(uid)] = [int(age)]
-            ids.append(int(uid))
+            ages.append(int(age))
     with open('payments.csv') as f:
         for line in csv.reader(f):
             amount, _, uid = line
-            users[int(uid)].append(int(amount))
-    ids.sort()
-    rtn = []
-    for i in ids:
-        rtn.append(users[i])
-    return rtn
+            payments.append(float(amount) / 100)
+    return (ages, payments)
 
 
 if __name__ == '__main__':
     t = time.perf_counter()
-    users = load_data()
+    payload = load_data()
     print(f'Data loading: {time.perf_counter() - t:.3f}s')
     t = time.perf_counter()
-    assert abs(average_age(users) - 59.626) < 0.01
-    assert abs(stddev_payment_amount(users) - 288684.849) < 0.01
-    assert abs(average_payment_amount(users) - 499850.559) < 0.01
+    assert abs(average_age(payload) - 59.626) < 0.01
+    assert abs(stddev_payment_amount(payload) - 288684.849) < 0.01
+    assert abs(average_payment_amount(payload) - 499850.559) < 0.01
     print(f'Computation {time.perf_counter() - t:.3f}s')
