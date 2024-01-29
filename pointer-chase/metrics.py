@@ -11,8 +11,7 @@ class Address(object):
 
 
 class DollarAmount(object):
-    def __init__(self, dollars, cents):
-        self.dollars = dollars
+    def __init__(self, cents):
         self.cents = cents
 
 
@@ -44,8 +43,8 @@ def average_payment_amount(users):
     for u in users.values():
         count += len(u.payments)
         for p in u.payments:
-            amount += float(p.amount.dollars) + float(p.amount.cents) / 100
-    return amount / count
+            amount += p.amount.cents
+    return float(amount) / count / 100
 
 
 def stddev_payment_amount(users):
@@ -55,10 +54,9 @@ def stddev_payment_amount(users):
     for u in users.values():
         count += len(u.payments)
         for p in u.payments:
-            amount = float(p.amount.dollars) + float(p.amount.cents) / 100
-            diff = amount - mean
+            diff = p.amount.cents - mean * 100
             squared_diffs += diff * diff
-    return math.sqrt(squared_diffs / count)
+    return math.sqrt(squared_diffs / count / 10000)
 
 
 def load_data():
@@ -72,7 +70,7 @@ def load_data():
         for line in csv.reader(f):
             amount, timestamp, uid = line
             payment = Payment(
-                DollarAmount(dollars=int(amount)//100, cents=int(amount) % 100),
+                DollarAmount(cents=int(amount)),
                 time=datetime.datetime.fromisoformat(timestamp))
             users[int(uid)].payments.append(payment)
     return users
