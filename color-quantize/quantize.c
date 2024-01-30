@@ -19,52 +19,26 @@
 #define BLUE2 0x02
 #define BLUE3 0x03
 
-unsigned char quantize(unsigned char red, unsigned char green,
-                       unsigned char blue) {
+/*
+
+Problem: branch prediction rates are poor because:
+1) 16 possible branches
+2) images can be unpredictable - you might get a smooth gradient (e.g. picture of sea), or you could get a picture of random mishmashed colors
+
+Use a lookup table so instead of branch prediction, we load an array lookup instead.
+
+ */
+
+
+unsigned char RED_LOOKUP[] = {RED0, RED1, RED2, RED3, RED4, RED5, RED6, RED7};
+unsigned char GREEN_LOOKUP[] = {GREEN0, GREEN1, GREEN2, GREEN3, GREEN4, GREEN5, GREEN6, GREEN7};
+unsigned char BLUE_LOOKUP[] = {BLUE0, BLUE1, BLUE2, BLUE3};
+
+unsigned char quantize(unsigned char red, unsigned char green, unsigned char blue) {
   unsigned char out = 0;
-  if (red < 0x20)
-    out += RED0;
-  else if (red < 0x40)
-    out += RED1;
-  else if (red < 0x60)
-    out += RED2;
-  else if (red < 0x80)
-    out += RED3;
-  else if (red < 0xa0)
-    out += RED4;
-  else if (red < 0xc0)
-    out += RED5;
-  else if (red < 0xe0)
-    out += RED6;
-  else
-    out += RED7;
-
-  if (green < 0x20)
-    out += GREEN0;
-  else if (green < 0x40)
-    out += GREEN1;
-  else if (green < 0x60)
-    out += GREEN2;
-  else if (green < 0x80)
-    out += GREEN3;
-  else if (green < 0xa0)
-    out += GREEN4;
-  else if (green < 0xc0)
-    out += GREEN5;
-  else if (green < 0xe0)
-    out += GREEN6;
-  else
-    out += GREEN7;
-
-  if (blue < 0x40)
-    out += BLUE0;
-  else if (blue < 0x80)
-    out += BLUE1;
-  else if (blue < 0xc0)
-    out += BLUE2;
-  else
-    out += BLUE3;
+  out += RED_LOOKUP[red / 0x20];   // Assuming red, green, blue values are always < 0x100
+  out += GREEN_LOOKUP[green / 0x20];
+  out += BLUE_LOOKUP[blue / 0x40];
 
   return out;
 }
-
