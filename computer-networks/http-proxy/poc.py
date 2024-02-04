@@ -1,11 +1,17 @@
 import select
 import socket
+import sys
 import re
 
 
 pattern = b"^([^:]+): \s*(.*)"
-PROXY_ADDR = ('localhost', 9000)
+PROXY_ADDR = ('localhost', 8200)
+UPSTREAM_ADDR = ('localhost', 9000)
 MAX_CONN = 5
+
+
+def log(s):
+    print(s, file=sys.stderr)
 
 
 class HTTPRequest:
@@ -55,13 +61,13 @@ if __name__ == "__main__":
     inputs = [ss]
     # Sockets that are ready for writing to
     outputs = []
+    # Ongoing requests
     requests = {}
 
     while inputs:
         readable, writable, exceptional = select.select(inputs, outputs, inputs)
 
         for s in readable:
-            print(f"processing readable socket {s}")
             if s == ss:
                 cs, addr = s.accept()
                 cs.setblocking(False)
@@ -70,26 +76,39 @@ if __name__ == "__main__":
             else:
                 assert s in inputs
                 data = s.recv(1024)
+                req = requests[s]
                 if data:
-                    req = requests[s]
                     req.parse(data)
-                    if s not in outputs:
+                    if s not in outputs and req.ongoing() == False:
                         outputs.append(s)
                 else:
                     if s in outputs:
                         outputs.remove(s)
                     inputs.remove(s)
-                    s.close()
+
                     del requests[s]
+
         for s in writable:
-            print(f"processing writable socket {s}")
-            s.send(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+            ps = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ps.connect(UPSTREAM_ADDR)
+            print(f"Connected to {UPSTREAM_ADDR}")
+            ps.sendall(requests[s].raw)
+
+            # Forward response back to client
+            while True:
+                data = ps.recv(512)
+                log(f'   * <- {len(data)}B')
+                if not data:
+                    break
+                log(f'<- *    {len(data)}B')
+                s.send(data)
+
+            ps.close()
+            requests[s] = HTTPRequest()
             outputs.remove(s)
-        for s in exceptional:
-            print(f"processing exceptional socket {s}")
-            inputs.remove(s)
-            if s in outputs:
-                outputs.remove(s)
-            s.close()
-            del requests[s]
+            if not req.keepalive():
+                inputs.remove(s)
+                s.close()
+
+            print(f"open connections: {len(inputs) - 1}")
 
